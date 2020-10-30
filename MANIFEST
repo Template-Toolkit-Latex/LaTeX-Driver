@@ -16,10 +16,10 @@ INSTALL
 lib/LaTeX/Driver.pm
 lib/LaTeX/Driver/FilterProgram.pm
 Makefile.PL
-MANIFEST			This list of files
+MANIFEST                        This list of files
 MANIFEST.SKIP
-META.yml			Module meta-data (added by MakeMaker)
-README				General information, installation, etc.
+META.yml                        Module meta-data (added by MakeMaker)
+README                          General information, installation, etc.
 README.md
 script/latex2dvi
 script/latex2pdf
@@ -66,4 +66,3 @@ t/testdata/30-output-to-variable/30-output-to-variable.tex
 t/testdata/31-input-from-variable/31-input-from-variable.tex
 t/testdata/40-pkg-longtable/40-pkg-longtable.tex
 t/testdata/README
-TODO
