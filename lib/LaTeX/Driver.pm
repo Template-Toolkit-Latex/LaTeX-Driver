@@ -1250,9 +1250,9 @@ None known.
 
 =head1 BUGS AND LIMITATIONS
 
-This is beta software - there are bound to be bugs and misfeatures.
 If you have any comments about this software I would be very grateful
-to hear them; email me at E<lt>a.ford@ford-mason.co.ukE<gt>.
+to hear them; please file your comments as issues at
+L<https://github.com/Template-Toolkit-Latex/LaTeX-Driver/issues>.
 
 Among the things I am aware of are:
 
