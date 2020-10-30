@@ -37,7 +37,7 @@ __PACKAGE__->mk_accessors( qw( basename basedir basepath options
                                undefined_citations undefined_references
                                labels_changed rerun_required ) );
 
-our $DEBUG; $DEBUG = 0 unless defined $DEBUG;
+our $DEBUG;
 our $DEBUGPREFIX;
 
 
@@ -91,9 +91,6 @@ sub new {
     my $options = ref $_[0] ? shift : { @_ };
     my ($volume, $basedir, $basename, $basepath, $orig_ext, $cleanup);
     my ($formatter, @postprocessors);
-
-    $DEBUG       = $options->{DEBUG} || 0;
-    $DEBUGPREFIX = $options->{DEBUGPREFIX} if exists $options->{DEBUGPREFIX};
 
     # Sanity check first - check we're running on a supported OS
 
@@ -253,8 +250,6 @@ sub new {
 sub run {
     my $self = shift;
 
-    $DEBUG = $self->options->{DEBUG} || 0;
-
     # Check that the file exists
 
     $self->throw(sprintf('file %s.tex does not exist', $self->basepath))
@@ -339,7 +334,7 @@ sub run_latex {
         $self->reset_latex_required;
         my $matched = 0;
         while ( my $line = <$fh> ) {
-            debug($line) if $DEBUG >= 9;
+            $self->debug($line) if $DEBUG >= 9;
             # TeX errors start with a "!" at the start of the
             # line, and followed several lines later by a line
             # designator of the form "l.nnn" where nnn is the line
@@ -362,24 +357,24 @@ sub run_latex {
                 $self->undefined_references(1);
             }
             elsif ( $line =~ /^LaTeX Warning: Citation .* on page \d+ undefined/ ) {
-                debug('undefined citations detected') if $DEBUG;
+                $self->debug('undefined citations detected');
                 $self->undefined_citations(1);
             }
             elsif ( $line =~ /LaTeX Warning: There were undefined references./i ) {
-                debug('undefined reference detected') if $DEBUG;
+                $self->debug('undefined reference detected');
                 $self->undefined_references(1)
                     unless $self->undefined_citations;
             }
             elsif ( $line =~ /No file $basename\.(toc|lof|lot)/i ) {
-                debug("missing $1 file") if $DEBUG;
+                $self->debug("missing $1 file");
                 $self->undefined_references(1);
             }
             elsif ( $line =~ /^LaTeX Warning: Label\(s\) may have changed./i ) {
-                debug('labels have changed') if $DEBUG;
+                $self->debug('labels have changed');
                 $self->labels_changed(1);
             }
             elsif ( $line =~ /^Package longtable Warning: Table widths have changed[.] Rerun LaTeX[.]/i) {
-                debug('table widths changed') if $DEBUG;
+                $self->debug('table widths changed');
                 $self->rerun_required(1);
             }
 
@@ -387,7 +382,7 @@ sub run_latex {
             # pdfmark, etc); this regexp catches most of those.
 
             elsif ( $line =~ /Rerun to get (.*) right/i) {
-                debug("$1 changed") if $DEBUG;
+                $self->debug("$1 changed");
                 $self->rerun_required(1);
             }
         }
@@ -655,7 +650,7 @@ sub run_command {
     $envvars = [ $envvars ] unless ref $envvars;
     local(@ENV{@{$envvars}}) = map { $self->texinputs_path } @{$envvars};
     $self->stats->{runs}{$progname}++;
-    debug("running '$program $args'") if $DEBUG;
+    $self->debug("running '$program $args'");
     my $cwd = pushd($dir);
 
     # Format the command appropriately for our O/S
@@ -709,10 +704,10 @@ sub copy_to_output {
         # it's quite common for /tmp to be a separate filesystem
 
         if (rename($file, $output)) {
-            debug("renamed $file to $output") if $DEBUG;
+            $self->debug("renamed $file to $output");
         }
         elsif (copy($file, $output)) {
-            debug("copied $file to $output") if $DEBUG;
+            $self->debug("copied $file to $output");
         }
         else {
             $self->throw("failed to copy $file to $output");
@@ -736,7 +731,7 @@ sub _setup_tmpdir {
     $tmp = File::Spec->catdir(File::Spec->tmpdir(), $dirname . 'XXXXXXX')
         if ($dirname and ($dirname ne 1));
 
-    debug(sprintf("setting up temporary directory '%s'\n", $dirname)) if $DEBUG;
+    __PACKAGE__->debug(sprintf("setting up temporary directory '%s'\n", $dirname));
     return File::Temp->newdir(TEMPLATE => $tmp);
 }
 
@@ -795,9 +790,14 @@ sub throw {
 }
 
 sub debug {
-    my (@args) = @_;
-    print STDERR $DEBUGPREFIX || "[latex] ", @args;
-    print STDERR "\n" unless @args and ($args[-1] =~ / \n $ /mx);
+    my ($self, @args) = @_;
+
+    if (ref $self ? $self->{DEBUG} : $DEBUG) {
+        my $prefix = ref $self ? $self->{DEBUGPREFIX} : $DEBUGPREFIX;
+        $prefix ||= '[latex] ';
+        print STDERR $prefix, @args;
+        print STDERR "\n" unless @args and ($args[-1] =~ / \n $ /mx);
+    }
     return;
 }
 
