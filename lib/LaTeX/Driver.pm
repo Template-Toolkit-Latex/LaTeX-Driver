@@ -733,7 +733,7 @@ sub _setup_tmpdir {
     $tmp = File::Spec->catdir(File::Spec->tmpdir(), $dirname . 'XXXXXXX')
         if ($dirname and ($dirname ne 1));
 
-    __PACKAGE__->debug(sprintf("setting up temporary directory '%s'\n", $dirname));
+    __PACKAGE__->debug("setting up temporary directory '%s'\n", $dirname || '');
     return File::Temp->newdir(TEMPLATE => $tmp);
 }
 
