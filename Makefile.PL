@@ -12,9 +12,11 @@ readme_from 'lib/LaTeX/Driver.pm';
 
 requires_external_bin 'latex';
 
+requires 'Capture::Tiny';
 requires 'Class::Accessor';
 requires 'Cwd';
 requires 'Exception::Class';
+requires 'File::pushd';
 requires 'File::Slurp';
 requires 'File::Spec';
 requires 'File::Temp' => '0.23';
@@ -22,8 +24,6 @@ requires 'Getopt::Long';
 requires 'IO::File';
 requires 'parent';
 requires 'Readonly';
-requires 'File::pushd';
-requires 'Capture::Tiny';
 
 test_requires 'Test::More' => '0.88';
 
