@@ -26,6 +26,8 @@ use Readonly;
 use File::pushd;                        # temporary cwd changes
 use Capture::Tiny qw(capture);
 
+use Log::Any qw($log);
+
 Readonly our $DEFAULT_MAXRUNS => 10;
 
 our $VERSION = "1.1.1";
@@ -334,7 +336,7 @@ sub run_latex {
         $self->reset_latex_required;
         my $matched = 0;
         while ( my $line = <$fh> ) {
-            $self->debug($line) if $DEBUG >= 9;
+            $log->trace($line);
             # TeX errors start with a "!" at the start of the
             # line, and followed several lines later by a line
             # designator of the form "l.nnn" where nnn is the line
@@ -790,14 +792,17 @@ sub throw {
 }
 
 sub debug {
-    my ($self, @args) = @_;
+    my ($self, $string, @args) = @_;
 
-    if (ref $self ? $self->{DEBUG} : $DEBUG) {
-        my $prefix = ref $self ? $self->{DEBUGPREFIX} : $DEBUGPREFIX;
-        $prefix ||= '[latex] ';
-        print STDERR $prefix, @args;
-        print STDERR "\n" unless @args and ($args[-1] =~ / \n $ /mx);
-    }
+    my $prefix = ref $self ? $self->{DEBUGPREFIX} : $DEBUGPREFIX;
+    $prefix ||= '[latex] ';
+    $log->debugf($prefix . $string, @args)
+        or do {
+            if (ref $self ? $self->{DEBUG} : $DEBUG) {
+                print STDERR $prefix, @args;
+                print STDERR "\n" unless @args and ($args[-1] =~ / \n $ /mx);
+            }
+    };
     return;
 }
 
@@ -1225,6 +1230,12 @@ location.
 
 
 =head1 CONFIGURATION AND ENVIRONMENT
+
+When the using application configures L<Log::Any>, this module will use
+it to log C<debug> and C<trace> level messages to the C<LaTeX::Driver>
+category. Please note that the C<$DEBUG> variable does not need to be
+set to enable this type of logging. When this type of logging is enabled,
+the value of C<$DEBUG> is ignored.
 
 
 =head1 DEPENDENCIES

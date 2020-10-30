@@ -22,6 +22,7 @@ requires 'File::Spec';
 requires 'File::Temp' => '0.23';
 requires 'Getopt::Long';
 requires 'IO::File';
+requires 'Log::Any';
 requires 'parent';
 requires 'Readonly';
 
