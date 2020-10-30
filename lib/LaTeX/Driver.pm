@@ -30,7 +30,7 @@ use Log::Any qw($log);
 
 Readonly our $DEFAULT_MAXRUNS => 10;
 
-our $VERSION = "1.1.1";
+our $VERSION = "1.2.0";
 
 __PACKAGE__->mk_accessors( qw( basename basedir basepath options
                                source output tmpdir format timeout stderr
@@ -817,7 +817,7 @@ LaTeX::Driver - Latex driver
 
 =head1 VERSION
 
-1.1.1
+1.2.0
 
 =head1 SYNOPSIS
 
@@ -1388,7 +1388,7 @@ the web2c TeX distribution, TeX live, tetex, TeX on Windows, etc.
 
 =head1 AUTHOR
 
-   Chris Travers <chris.travers@gmail.com>  (current maintainer)
+   Erik Huelsmann  <erik@efficito.com>  (current maintainer)
 
 =head1 LICENSE AND COPYRIGHT
 
