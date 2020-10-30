@@ -20,6 +20,7 @@ use File::Compare;                      # standard Perl class
 use File::Path;                         # standard Perl class
 use File::Slurp;
 use File::Spec;                         # from PathTools
+use File::Temp;
 use IO::File;                           # from IO
 use Readonly;
 use File::pushd;                        # temporary cwd changes
@@ -161,7 +162,7 @@ sub new {
     my $tmpdir = $options->{tmpdir};
     if ($tmpdir or ref $source) {
         $basedir = $class->_setup_tmpdir($tmpdir);
-        $cleanup = 'rmdir' if ((!defined($tmpdir)) or ($tmpdir eq "1"));
+
         if (ref $source) {
             $basename = $DEFAULT_DOCNAME;
             $basepath = File::Spec->catfile($basedir, $basename);
@@ -217,23 +218,28 @@ sub new {
 
     # construct and return the object
 
-    return $class->SUPER::new( { basename       => $basename,
-                                 basedir        => $basedir,
-                                 basepath       => $basepath,
-                                 format         => $format,
-                                 output         => $output,
-                                 cleanup        => $cleanup || '',
-                                 options        => $options,
-                                 maxruns        => $options->{maxruns}   || $DEFAULT_MAXRUNS,
-                                 extraruns      => $options->{extraruns} ||  0,
-                                 timeout        => $options->{timeout},
-                                 capture_stderr => $options->{capture_stderr} || 0,
-                                 formatter      => $formatter,
-                                 _program_path  => $path,
-                                 texinputs_path => join($texinputs_sep, ('.', @{$texinputs_path}, '')),
-                                 preprocessors  => [],
-                                 postprocessors => \@postprocessors,
-                                 stats          => { runs => {} } } );
+    return $class->SUPER::new(
+        {
+            basename       => $basename,
+            basedir        => "$basedir",
+            _file_tmp_base => $basedir, # retain ref during object life
+            basepath       => $basepath,
+            format         => $format,
+            output         => $output,
+            cleanup        => $cleanup || '',
+            options        => $options,
+            maxruns        => $options->{maxruns}   || $DEFAULT_MAXRUNS,
+            extraruns      => $options->{extraruns} ||  0,
+            timeout        => $options->{timeout},
+            capture_stderr => $options->{capture_stderr} || 0,
+            formatter      => $formatter,
+            _program_path  => $path,
+            texinputs_path => join($texinputs_sep,
+                                   ('.', @{$texinputs_path}, '')),
+            preprocessors  => [],
+            postprocessors => \@postprocessors,
+            stats          => { runs => {} }
+        });
 
 }
 
@@ -307,21 +313,6 @@ sub run {
     return 1;
 }
 
-
-
-#------------------------------------------------------------------------
-# destructor
-#
-#------------------------------------------------------------------------
-
-sub DESTROY {
-    my $self = shift;
-
-    debug('DESTROY called') if $DEBUG;
-
-    $self->cleanup();
-    return;
-}
 
 
 #------------------------------------------------------------------------
@@ -742,25 +733,12 @@ sub copy_to_output {
 sub _setup_tmpdir {
     my ($class, $dirname) = @_;
 
-    my $tmp  = File::Spec->tmpdir();
-
-    if ($dirname and ($dirname ne 1)) {
-        $dirname = File::Spec->catdir($tmp, $dirname);
-        eval { mkpath($dirname, 0, oct(700)) } unless -d $dirname;
-    }
-    else {
-        my $n = 0;
-        do {
-            $dirname = File::Spec->catdir($tmp, "$DEFAULT_TMPDIR$$" . '_' . $n++);
-        } while (-e $dirname);
-        eval { mkpath($dirname, 0, oct(700)) };
-    }
-    $class->throw("cannot create temporary directory: $@")
-        if $@;
+    my $tmp;
+    $tmp = File::Spec->catdir(File::Spec->tmpdir(), $dirname . 'XXXXXXX')
+        if ($dirname and ($dirname ne 1));
 
     debug(sprintf("setting up temporary directory '%s'\n", $dirname)) if $DEBUG;
-
-    return $dirname;
+    return File::Temp->newdir(TEMPLATE => $tmp);
 }
 
 
@@ -768,19 +746,12 @@ sub _setup_tmpdir {
 # $self->cleanup
 #
 # cleans up the temporary files
-# TODO: work out exactly what this should do
 #------------------------------------------------------------------------
 
 sub cleanup {
     my ($self, $what) = @_;
-    my $cleanup = $self->{cleanup};
     debug('cleanup called') if $DEBUG;
-    if ($cleanup eq 'rmdir') {
-        if ((!defined $what) or ($what ne 'none')) {
-            debug('cleanup removing directory tree ' . $self->basedir) if $DEBUG;
-            rmtree($self->basedir);
-        }
-    }
+
     return;
 }
 
