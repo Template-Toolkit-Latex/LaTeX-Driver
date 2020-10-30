@@ -17,6 +17,7 @@ requires 'Cwd';
 requires 'Exception::Class';
 requires 'File::Slurp';
 requires 'File::Spec';
+requires 'File::Temp' => '0.23';
 requires 'Getopt::Long';
 requires 'IO::File';
 requires 'parent';

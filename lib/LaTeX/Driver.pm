@@ -20,6 +20,7 @@ use File::Compare;                      # standard Perl class
 use File::Path;                         # standard Perl class
 use File::Slurp;
 use File::Spec;                         # from PathTools
+use File::Temp;
 use IO::File;                           # from IO
 use Readonly;
 use File::pushd;                        # temporary cwd changes
@@ -161,7 +162,7 @@ sub new {
     my $tmpdir = $options->{tmpdir};
     if ($tmpdir or ref $source) {
         $basedir = $class->_setup_tmpdir($tmpdir);
-        $cleanup = 'rmdir' if ((!defined($tmpdir)) or ($tmpdir eq "1"));
+
         if (ref $source) {
             $basename = $DEFAULT_DOCNAME;
             $basepath = File::Spec->catfile($basedir, $basename);
@@ -217,23 +218,28 @@ sub new {
 
     # construct and return the object
 
-    return $class->SUPER::new( { basename       => $basename,
-                                 basedir        => $basedir,
-                                 basepath       => $basepath,
-                                 format         => $format,
-                                 output         => $output,
-                                 cleanup        => $cleanup || '',
-                                 options        => $options,
-                                 maxruns        => $options->{maxruns}   || $DEFAULT_MAXRUNS,
-                                 extraruns      => $options->{extraruns} ||  0,
-                                 timeout        => $options->{timeout},
-                                 capture_stderr => $options->{capture_stderr} || 0,
-                                 formatter      => $formatter,
-                                 _program_path  => $path,
-                                 texinputs_path => join($texinputs_sep, ('.', @{$texinputs_path}, '')),
-                                 preprocessors  => [],
-                                 postprocessors => \@postprocessors,
-                                 stats          => { runs => {} } } );
+    return $class->SUPER::new(
+        {
+            basename       => $basename,
+            basedir        => "$basedir",
+            _file_tmp_base => $basedir, # retain ref during object life
+            basepath       => $basepath,
+            format         => $format,
+            output         => $output,
+            cleanup        => $cleanup || '',
+            options        => $options,
+            maxruns        => $options->{maxruns}   || $DEFAULT_MAXRUNS,
+            extraruns      => $options->{extraruns} ||  0,
+            timeout        => $options->{timeout},
+            capture_stderr => $options->{capture_stderr} || 0,
+            formatter      => $formatter,
+            _program_path  => $path,
+            texinputs_path => join($texinputs_sep,
+                                   ('.', @{$texinputs_path}, '')),
+            preprocessors  => [],
+            postprocessors => \@postprocessors,
+            stats          => { runs => {} }
+        });
 
 }
 
@@ -300,28 +306,12 @@ sub run {
 
 
     # Return any output
-
     $self->copy_to_output
         if $self->output;
 
     return 1;
 }
 
-
-
-#------------------------------------------------------------------------
-# destructor
-#
-#------------------------------------------------------------------------
-
-sub DESTROY {
-    my $self = shift;
-
-    debug('DESTROY called') if $DEBUG;
-
-    $self->cleanup();
-    return;
-}
 
 
 #------------------------------------------------------------------------
@@ -742,45 +732,36 @@ sub copy_to_output {
 sub _setup_tmpdir {
     my ($class, $dirname) = @_;
 
-    my $tmp  = File::Spec->tmpdir();
-
-    if ($dirname and ($dirname ne 1)) {
-        $dirname = File::Spec->catdir($tmp, $dirname);
-        eval { mkpath($dirname, 0, oct(700)) } unless -d $dirname;
-    }
-    else {
-        my $n = 0;
-        do {
-            $dirname = File::Spec->catdir($tmp, "$DEFAULT_TMPDIR$$" . '_' . $n++);
-        } while (-e $dirname);
-        eval { mkpath($dirname, 0, oct(700)) };
-    }
-    $class->throw("cannot create temporary directory: $@")
-        if $@;
+    my $tmp;
+    $tmp = File::Spec->catdir(File::Spec->tmpdir(), $dirname . 'XXXXXXX')
+        if ($dirname and ($dirname ne 1));
 
     debug(sprintf("setting up temporary directory '%s'\n", $dirname)) if $DEBUG;
-
-    return $dirname;
+    return File::Temp->newdir(TEMPLATE => $tmp);
 }
 
 
 #------------------------------------------------------------------------
-# $self->cleanup
+# Destructor (clean up log/temp files)
 #
-# cleans up the temporary files
-# TODO: work out exactly what this should do
 #------------------------------------------------------------------------
 
-sub cleanup {
-    my ($self, $what) = @_;
-    my $cleanup = $self->{cleanup};
-    debug('cleanup called') if $DEBUG;
-    if ($cleanup eq 'rmdir') {
-        if ((!defined $what) or ($what ne 'none')) {
-            debug('cleanup removing directory tree ' . $self->basedir) if $DEBUG;
-            rmtree($self->basedir);
-        }
-    }
+sub DESTROY {
+    local($., $@, $!, $^E, $?);
+    my $self = shift;
+
+    # Don't log in DESTROY: it has weird interactions with
+    #  global destruction; also: don't use other objects here.
+    my $what = $self->{cleanup};
+
+    return if (not $what or $what eq 'none' or not -d $self->basedir);
+
+    unlink $self->basepath . ".$_"
+        for (@LOGFILE_EXTS);
+    return if ($what eq 'logfiles');
+
+    unlink $self->basepath . ".$_"
+        for (@TMPFILE_EXTS);
     return;
 }
 
@@ -843,7 +824,6 @@ LaTeX::Driver - Latex driver
                                %other_params );
     $ok    = $drv->run;
     $stats = $drv->stats;
-    $drv->cleanup($what);
 
 =head1 DESCRIPTION
 
@@ -857,7 +837,8 @@ This module runs the required commands in the directory specified,
 either explicitly with the C<dirname> option or implicitly by the
 directory part of C<basename>, or in the current directory.  As a
 result of the processing up to a dozen or more intermediate files are
-created.  These can be removed with the C<cleanup> method.
+created.  These will be removed upon object destruction, given the
+C<cleanup> argument to C<new>.
 
 
 =head1 SOURCE
@@ -1054,14 +1035,6 @@ hash of the number of times each of the programs was run
 
 Note: the return value will probably become an object in a future
 version of the module.
-
-
-=item C<cleanup($what)>
-
-Removes temporary intermediate files from the document directory and
-resets the stats.
-
-Not yet implemented
 
 
 =item C<program_path($program_name, $opt_value)>
