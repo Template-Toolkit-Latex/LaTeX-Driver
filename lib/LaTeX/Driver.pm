@@ -61,19 +61,19 @@ our $DEFAULT_DOCNAME = 'latexdoc';
 our $DEFAULT_FORMAT = 'pdf';
 
 our %FORMATTERS  = (
-    dvi        => [ 'latex' ],
-    ps         => [ 'latex', 'dvips' ],
-    postscript => [ 'latex', 'dvips' ],
-    pdf        => [ 'xelatex' ],
+    dvi             => [ 'latex' ],
+    ps              => [ 'latex', 'dvips' ],
+    postscript      => [ 'latex', 'dvips' ],
+    pdf             => [ 'xelatex' ],
     'pdf(pdflatex)' => [ 'pdflatex' ],
     'pdf(xelatex)'  => [ 'xelatex' ],
-    'pdf(lualatex)'  => [ 'lualatex' ],
+    'pdf(lualatex)' => [ 'lualatex' ],
     'pdf(dvi)'      => [ 'latex', 'dvipdfm' ],
     'pdf(ps)'       => [ 'latex', 'dvips', 'ps2pdf' ],
     'ps(pdf)'       => [ 'pdflatex', 'pdf2ps' ],
-    'ps(pdflatex)'       => [ 'pdflatex', 'pdf2ps' ],
-    'ps(xelatex)'       => [ 'xelatex', 'pdf2ps' ],
-    'ps(lualatex)'       => [ 'lualatex', 'pdf2ps' ],
+    'ps(pdflatex)'  => [ 'pdflatex', 'pdf2ps' ],
+    'ps(xelatex)'   => [ 'xelatex', 'pdf2ps' ],
+    'ps(lualatex)'  => [ 'lualatex', 'pdf2ps' ],
 );
 
 
