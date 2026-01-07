@@ -105,6 +105,8 @@ LaTeX::Driver::FilterProgram
 
 =head1 VERSION
 
+1.3.1
+
 =head1 SYNOPSIS
 
   use LaTeX::Driver::FilterProgram;
